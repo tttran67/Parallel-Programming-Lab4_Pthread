@@ -1,0 +1,5 @@
+# depslib dependency file v1.0
+1649680477 source:d:\my projects\gcc test proj\lesson3\general\serial\main.cpp
+	<iostream>
+	<sys/time.h>
+
