@@ -1,0 +1,12 @@
+# depslib dependency file v1.0
+1651754281 source:d:\my projects\gcc test proj\lesson3\special\pthread_sse\main.cpp
+	<iostream>
+	<pthread.h>
+	<stdlib.h>
+	<stdio.h>
+	<windows.h>
+	<fstream>
+	<sstream>
+	<bitset>
+	<immintrin.h>
+

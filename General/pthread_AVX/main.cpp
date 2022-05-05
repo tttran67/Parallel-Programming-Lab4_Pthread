@@ -3,10 +3,10 @@
 #include<stdlib.h>
 #include<stdio.h>
 #include<sys/time.h>
-#include<arm_neon.h>
-#define NUM_THREADS 1
+#include<immintrin.h>
+#define NUM_THREADS 7
 using namespace std;
-const int n = 200;
+const int n = 2000;
 float A[n][n];
 
 //初始化矩阵A
@@ -37,40 +37,36 @@ pthread_barrier_t barrier_Division;
 pthread_barrier_t barrier_Elimination;
 //线程函数定义
 void *threadFunc(void *param){
-    float32x4_t vx = vmovq_n_f32(0);
-    float32x4_t vaij = vmovq_n_f32(0);
-    float32x4_t vaik = vmovq_n_f32(0);
-    float32x4_t vakj = vmovq_n_f32(0);
     threadParam_t *p = (threadParam_t*)param;
     int t_id = p->t_id;
 
+    __m256 t1, t2, t3;
     for(int k = 0;k < n;++k){
         int j = k + t_id + 1;
         for(;j < n; j += NUM_THREADS){
             A[k][j] = A[k][j] / A[k][k];
         }
-        A[k][k] = 1.0;
 
         //第一个同步点
         pthread_barrier_wait(&barrier_Division);
 
         for(int i = k + 1 + t_id;i < n;i += NUM_THREADS){
             //消去
-            /*for(int j = k + 1;j < n; j++){
-                A[i][j] = A[i][j] - A[k][j] * A[i][k];
-            }*/
-            vaik = vmovq_n_f32(A[i][k]);
-            int j = k + 1;
-            for(;j + 4 <= n;j += 4){
-                vakj = vld1q_f32(&A[k][j]);
-                vaij = vld1q_f32(&A[i][j]);
-                vx = vmulq_f32(vakj,vaik);
-                vaij = vsubq_f32(vaij,vx);
-                vst1q_f32(&A[i][j],vaij);
+            float temp2[8] = {A[i][k], A[i][k], A[i][k], A[i][k], A[i][k], A[i][k], A[i][k], A[i][k]};
+            t1 = _mm256_loadu_ps(temp2);
+            j = k + 1;
+            for (; j + 8 <= n; j += 8)
+            {
+                t2 = _mm256_loadu_ps(&A[i][j]);
+                t3 = _mm256_loadu_ps(&A[k][j]);
+                t3 = _mm256_mul_ps(t1, t3);
+                t2 = _mm256_sub_ps(t2, t3);
+                _mm256_storeu_ps(&A[i][j], t2);
             }
-            for(;j < n; j++){
-                A[i][j] = A[i][j] - A[k][j] * A[i][k];
+            for (; j < n; j++){
+                A[i][j] = A[i][j] - A[i][k] * A[k][j];
             }
+
             A[i][k] = 0.0;
         }
         //第二个同步点
@@ -96,15 +92,15 @@ int main()
         param[t_id].t_id = t_id;
         pthread_create(&handles[t_id],NULL,threadFunc,(void*)&param[t_id]);
     }
+
     for(int t_id = 0;t_id < NUM_THREADS;++t_id){
         pthread_join(handles[t_id],NULL);
     }
     gettimeofday(&tail,NULL);
-
+    cout<<"N: "<<n<<" Time: "<<(tail.tv_sec-head.tv_sec)*1000.0+(tail.tv_usec-head.tv_usec)/1000.0<<"ms";
     //销毁所有的barrier
     pthread_barrier_destroy(&barrier_Division);
     pthread_barrier_destroy(&barrier_Elimination);
-    cout<<"N: "<<n<<" Time: "<<(tail.tv_sec-head.tv_sec)*1000.0+(tail.tv_usec-head.tv_usec)/1000.0<<"ms";
 
     return 0;
 }
