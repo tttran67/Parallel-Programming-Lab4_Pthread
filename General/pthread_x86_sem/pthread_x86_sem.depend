@@ -1,9 +1,0 @@
-# depslib dependency file v1.0
-1651543489 source:d:\my projects\gcc test proj\lesson3\general\pthread_x86_sem\main.cpp
-	<iostream>
-	<pthread.h>
-	<stdlib.h>
-	<stdio.h>
-	<semaphore.h>
-	<sys/time.h>
-
